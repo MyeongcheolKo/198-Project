@@ -2,4 +2,77 @@ Brainstorm Ideas
 
 - wrist shake + heart rate detection 
 - train a ml model to detect abnormal activities 
-- 
+
+Perfect — so you want to design an IoT monitoring platform for nurses to quickly see which patients show abnormal activity patterns (like sleep/wake disturbances that may suggest delirium or other problems).
+
+Here’s how you could structure it:
+
+⸻
+
+🏥 IoT Patient Monitoring Platform for Abnormal Activities
+
+1. Patient Devices (Edge Layer)
+ • Each patient wears a smart wristband (accelerometer-based, like an actigraph).
+ • The device collects:
+ • Motion/activity counts
+ • Immobility periods (possible sleep episodes)
+ • Optional: heart rate, oxygen saturation
+
+💡 Hardware: ESP32 + accelerometer, or off-the-shelf medical wearables.
+
+⸻
+
+2. Communication Layer
+ • Devices send data via Wi-Fi / BLE → Gateway → Internet.
+ • Lightweight protocol MQTT is ideal for real-time health data.
+
+⸻
+
+3. Backend & Cloud Processing
+ • Central IoT platform collects and analyzes data:
+ • Compare day vs. night activity for each patient.
+ • Apply thresholds or ML models to detect abnormal patterns (e.g., no day–night difference, excessive immobility, irregular movement).
+ • Store historical data for trend analysis.
+
+💡 Options:
+ • Open-source: Node-RED, ThingsBoard, InfluxDB + Grafana
+ • Cloud: AWS IoT, Azure IoT Hub, Google Cloud IoT
+
+⸻
+
+4. Nurse Dashboard (Application Layer)
+ • A web or tablet dashboard that lists all patients in a ward.
+ • Key features:
+ • Patient list with status colors:
+ • 🟢 Normal activity
+ • 🟡 Borderline patterns
+ • 🔴 Abnormal (flagged for nurse attention)
+ • Click a patient → see activity graph (day/night).
+ • Historical trends to check if delirium risk is increasing.
+ • Real-time alerts/notifications (SMS, app notification).
+
+⸻
+
+5. Alerting System
+ • If abnormality is detected → alert the nurse immediately.
+ • Alerts can be:
+ • Pop-up on dashboard
+ • Text notification
+ • Integration with hospital paging system
+
+⸻
+
+✅ Example Workflow
+ 1. Patient wears IoT wristband.
+ 2. Data sent to hospital IoT server via MQTT.
+ 3. System analyzes activity (e.g., patient not moving much during day).
+ 4. If abnormal → flag in nurse dashboard + send alert.
+ 5. Nurse checks flagged patients first, improving efficiency.
+
+⸻
+
+⚡ End Goal: Nurses don’t have to manually check every patient. Instead, they just glance at the dashboard and instantly know who needs attention.
+
+⸻
+
+👉 Do you want me to design a sample dashboard mockup (layout: patient list, status indicators, graphs) so you can show how the nurses would see the data?
