@@ -4,6 +4,7 @@
 #include "spo2_algorithm.h"
 #include <Wire.h>
 #include "Logger.h"
+#include <Firebase_ESP_Client.h>
 
 PulseOximeter::PulseOximeter() {
   m_rateSpot = 0;
@@ -25,14 +26,16 @@ PulseOximeter::PulseOximeter() {
 }
 
 void PulseOximeter::update() {
-  m_irValue = m_particleSensor.getIR();
+  uint32_t irValue = m_particleSensor.getIR();
+  m_irValue = m_irValue * Constants::PulseOximeter::WEIGHT + irValue * (1 - Constants::PulseOximeter::WEIGHT);
 
   if (checkForBeat(m_irValue) == true) {
     //We sensed a beat!
     long delta = millis() - m_lastBeat;
     m_lastBeat = millis();
 
-    m_beatsPerMinute = 60 / (delta / 1000.0);
+    float beatsPerMinute = 60 / (delta / 1000.0);
+    m_beatsPerMinute = m_beatsPerMinute * Constants::PulseOximeter::WEIGHT + beatsPerMinute * (1 - Constants::PulseOximeter::WEIGHT);
 
     if (m_beatsPerMinute < 255 && m_beatsPerMinute > 20) {
       m_rates[m_rateSpot++] = (uint8_t)m_beatsPerMinute;  //Store this reading in the array
@@ -48,19 +51,15 @@ void PulseOximeter::update() {
 }
 
 void PulseOximeter::display() {
-  if (m_irValue < 50000) {
-    Logger::display("No finger?");
-  } else {
-    Logger::display("IR=", m_irValue);
-    Logger::display("BPM=", m_beatsPerMinute);
-    Logger::display("Avg BPM=", m_beatAvg);
-  }
+  Logger::display("IR:", m_irValue);
+  Logger::display("BPM:", m_beatsPerMinute);
+  Logger::display("ABPM:", m_beatAvg);
 }
 
-void PulseOximeter::logging() {
-  if (m_irValue >= 50000) {
-    Logger::record(Constants::PulseOximeter::IR_FIELD, m_irValue);
-    Logger::record(Constants::PulseOximeter::BPM_FIELD, m_beatsPerMinute);
-    Logger::record(Constants::PulseOximeter::AVG_BPM_FIELD, m_beatAvg);
-  }
+void PulseOximeter::logging(FirebaseJson* json) {
+  // if (m_irValue >= 50000) {
+  Logger::record(json, Constants::PulseOximeter::IR_ID, m_irValue);
+  Logger::record(json, Constants::PulseOximeter::BPM_ID, m_beatsPerMinute);
+  Logger::record(json, Constants::PulseOximeter::AVG_BPM_ID, m_beatAvg);
+  // }
 }

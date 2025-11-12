@@ -2,6 +2,7 @@
 #include "Accelerometer.h"
 #include <Wire.h>
 #include "Logger.h"
+#include <Firebase_ESP_Client.h>
 
 Accelerometer::Accelerometer(uint8_t address) {
   m_address = address;
@@ -31,7 +32,6 @@ void Accelerometer::update() {
   m_GyX = Wire.read() << 8 | Wire.read();
   m_GyY = Wire.read() << 8 | Wire.read();
   m_GyZ = Wire.read() << 8 | Wire.read();
-  Wire.endTransmission();
 }
 
 void Accelerometer::display() {
@@ -44,8 +44,8 @@ void Accelerometer::display() {
   // Logger::display("GyZ:", m_GyZ);
 }
 
-void Accelerometer::logging() {
-  Logger::record(Constants::Accelerometer::ACX_FIELD, m_AcX);
-  Logger::record(Constants::Accelerometer::ACY_FIELD, m_AcY);
-  Logger::record(Constants::Accelerometer::ACZ_FIELD, m_AcZ);
+void Accelerometer::logging(FirebaseJson* json) {
+  Logger::record(json, Constants::Accelerometer::ACX_ID, m_AcX);
+  Logger::record(json, Constants::Accelerometer::ACY_ID, m_AcY);
+  Logger::record(json, Constants::Accelerometer::ACZ_ID, m_AcZ);
 }

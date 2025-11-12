@@ -1,6 +1,7 @@
 #include <sys/_stdint.h>
 #include "MAX30105.h"
 #include <cstdint>
+#include <Firebase_ESP_Client.h>
 
 class PulseOximeter {
 public:
@@ -10,7 +11,7 @@ public:
 
   void display();
 
-  void logging();
+  void logging(FirebaseJson* json);
 
 private:
   MAX30105 m_particleSensor;
@@ -18,6 +19,6 @@ private:
   uint8_t m_rateSpot;
   uint32_t m_lastBeat;  //Time at which the last beat occurred
   float m_beatsPerMinute;
-  int32_t m_beatAvg;
-  long m_irValue;
+  uint8_t m_beatAvg;
+  uint32_t m_irValue;
 };

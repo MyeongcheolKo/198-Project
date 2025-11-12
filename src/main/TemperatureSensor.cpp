@@ -2,6 +2,7 @@
 #include "TemperatureSensor.h"
 #include <Wire.h>
 #include "Logger.h"
+#include <Firebase_ESP_Client.h>
 
 TemperatureSensor::TemperatureSensor(uint8_t address) {
   m_address = address;
@@ -19,13 +20,13 @@ void TemperatureSensor::update() {
 }
 
 void TemperatureSensor::display() {
-  if (m_temp > Constants::TemperatureSensor::THRESHOLD) {
-    Logger::display("Temp:", m_temp);
-  }
+  // if (m_temp > Constants::TemperatureSensor::THRESHOLD) {
+  Logger::display("Temp:", m_temp);
+  // }
 }
 
-void TemperatureSensor::logging() {
-  if (m_temp > Constants::TemperatureSensor::THRESHOLD) {
-    Logger::record(Constants::TemperatureSensor::TEMP_FIELD, m_temp);
-  }
+void TemperatureSensor::logging(FirebaseJson* json) {
+  // if (m_temp > Constants::TemperatureSensor::THRESHOLD) {
+  Logger::record(json, Constants::TemperatureSensor::TEMP_ID, m_temp);
+  // }
 }

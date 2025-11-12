@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <Firebase_ESP_Client.h>
 
 class Accelerometer {
 public:
@@ -8,7 +9,7 @@ public:
 
   void display();
 
-  void logging();
+  void logging(FirebaseJson* json);
 
 private:
   uint8_t m_address;

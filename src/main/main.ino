@@ -3,59 +3,50 @@
 #include "TemperatureSensor.h"
 #include "PulseOximeter.h"
 #include <Wire.h>
-#include <WiFi.h>
 #include "Logger.h"
+#include <Firebase_ESP_Client.h>
 
-Accelerometer accelerometer(Constants::Accelerometer::ADDRESS);
-TemperatureSensor temperatureSensor(Constants::TemperatureSensor::ADDRESS);
-PulseOximeter pulseOximeter;
-WiFiClient client;
+Accelerometer *accelerometer;
+TemperatureSensor *temperatureSensor;
+PulseOximeter *pulseOximeter;
+FirebaseJson *json;
 
-void setup_wifi() {
-  delay(10);
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-}
+uint32_t lastTime{ 0 };
 
 void setup() {
   Serial.begin(Constants::BAUD_RATE);
   Wire.begin(Constants::SDA, Constants::SCL);
 
+  accelerometer = new Accelerometer(Constants::Accelerometer::ADDRESS);
+  temperatureSensor = new TemperatureSensor(Constants::TemperatureSensor::ADDRESS);
+  pulseOximeter = new PulseOximeter();
+
   if (Constants::LOGGING) {
-    setup_wifi();
-    Logger::begin(client);
+    Logger::begin();
+    json = Logger::getJson();
+    lastTime = millis();
   }
 }
 
 void loop() {
-  accelerometer.update();
-  temperatureSensor.update();
-  pulseOximeter.update();
+  accelerometer->update();
+  temperatureSensor->update();
+  pulseOximeter->update();
 
   if (Constants::SERIALDISPLAY) {
-    accelerometer.display();
-    temperatureSensor.display();
-    pulseOximeter.display();
+    accelerometer->display();
+    temperatureSensor->display();
+    pulseOximeter->display();
   }
 
   if (Constants::LOGGING) {
-    accelerometer.logging();
-    temperatureSensor.logging();
-    pulseOximeter.logging();
-    Logger::send();
+    uint32_t time{ millis() };
+    if (time - lastTime > Constants::RECORDING_PERIOD) {
+      accelerometer->logging(json);
+      temperatureSensor->logging(json);
+      pulseOximeter->logging(json);
+      lastTime = time;
+    }
+    Logger::send(json);
   }
-
-  delay(100);
 }
