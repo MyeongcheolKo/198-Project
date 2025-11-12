@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" data-risk="low">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Delirium Monitor (Firebase)</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Chart.js + date adapter (must load before modules use it) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+</head>
+<body>
+  <header>
+    <h1>Delirium Monitor</h1>
+    <div class="status">
+      <span id="status" data-state="down" aria-live="polite">Disconnected</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Patient and settings">
+      <label>
+        Patient:
+        <select id="patientSelect" aria-label="Select patient"></select>
+      </label>
+      <label class="mute">
+        <input type="checkbox" id="mute" />
+        Mute alerts
+      </label>
+      <label class="source">
+        Data Source:
+        <select id="sourceSelect" aria-label="Select data source">
+          <option value="firestore">Firestore</option>
+          <option value="rtdb">Realtime DB</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="cards">
+      <div class="card score">
+        <div class="label">Current Risk</div>
+        <div class="value" id="scoreValue">0.00</div>
+        <div class="risk" id="riskLabel">LOW</div>
+        <div class="updated">Updated: <span id="lastUpdated">—</span></div>
+      </div>
+      <div class="card notes">
+        <p><strong>Note:</strong> Research prototype. Not a medical device. Do not display PHI on demo builds.</p>
+      </div>
+    </section>
+
+    <section class="chartwrap">
+      <canvas id="chart" role="img" aria-label="Delirium risk over time"></canvas>
+    </section>
+
+    <section>
+      <h2>Recent events</h2>
+      <table id="events">
+        <thead><tr><th>Time</th><th>Patient</th><th>Score</th><th>Risk</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- 1) Add your Firebase config by copying firebase-config.sample.js to firebase-config.js and filling values -->
+  <!-- 2) Choose data source via dropdown or by setting window.DATA_SOURCE in bootstrap.js -->
+  <script type="module" src="bootstrap.js"></script>
+</body>
+</html>
