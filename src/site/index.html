@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Delirium Monitor (Firebase)</title>
+  <title>Delirium Monitor (SensorData - Firestore)</title>
+
   <link rel="stylesheet" href="styles.css" />
-  <!-- Chart.js + date adapter (must load before modules use it) -->
+
+  <!-- Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 </head>
@@ -18,22 +20,12 @@
   </header>
 
   <main>
-    <section class="controls" aria-label="Patient and settings">
-      <label>
-        Patient:
-        <select id="patientSelect" aria-label="Select patient"></select>
-      </label>
+    <section class="controls" aria-label="Settings">
       <label class="mute">
         <input type="checkbox" id="mute" />
         Mute alerts
       </label>
-      <label class="source">
-        Data Source:
-        <select id="sourceSelect" aria-label="Select data source">
-          <option value="firestore">Firestore</option>
-          <option value="rtdb">Realtime DB</option>
-        </select>
-      </label>
+      <span class="hint">Live from Firestore: <code>SensorData</code></span>
     </section>
 
     <section class="cards">
@@ -43,8 +35,25 @@
         <div class="risk" id="riskLabel">LOW</div>
         <div class="updated">Updated: <span id="lastUpdated">—</span></div>
       </div>
+
       <div class="card notes">
-        <p><strong>Note:</strong> Research prototype. Not a medical device. Do not display PHI on demo builds.</p>
+        <p>
+          <strong>Note:</strong>
+          This dashboard shows real-life data streamed directly from our delirium detection device.
+        </p>
+      </div>
+
+      <div class="card raw">
+        <div class="label">Latest Sensor Readings</div>
+        <ul id="rawValues">
+          <li><strong>IR:</strong> —</li>
+          <li><strong>BPM:</strong> —</li>
+          <li><strong>ABPM:</strong> —</li>
+          <li><strong>AcX:</strong> —</li>
+          <li><strong>AcY:</strong> —</li>
+          <li><strong>AcZ:</strong> —</li>
+          <li><strong>Temp:</strong> —</li>
+        </ul>
       </div>
     </section>
 
@@ -55,14 +64,19 @@
     <section>
       <h2>Recent events</h2>
       <table id="events">
-        <thead><tr><th>Time</th><th>Patient</th><th>Score</th><th>Risk</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Score</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
         <tbody></tbody>
       </table>
     </section>
   </main>
 
-  <!-- 1) Add your Firebase config by copying firebase-config.sample.js to firebase-config.js and filling values -->
-  <!-- 2) Choose data source via dropdown or by setting window.DATA_SOURCE in bootstrap.js -->
-  <script type="module" src="bootstrap.js"></script>
+  <!-- App entrypoint -->
+  <script type="module" src="./bootstrap.js"></script>
 </body>
 </html>
