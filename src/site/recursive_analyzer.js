@@ -1,13 +1,12 @@
 // Lightweight recursive analyzer: tracks rolling baseline + detects anomalies via variance
+// OPTIMIZED: circular buffers, incremental statistics, O(1) updates
 
 export class RecursiveAnalyzer {
   constructor(opts = {}) {
-    // Window sizes (in # of samples; at 200ms per sample: 50 = 10s, 150 = 30s, 1500 = 5min)
-    this.LONG_WINDOW = opts.longWindow || 1500;    // ~5 min baseline
-    this.SHORT_WINDOW = opts.shortWindow || 150;   // ~30 sec current
-    this.MIN_SAMPLES = opts.minSamples || 100;     // min to start analyzing
+    this.LONG_WINDOW = opts.longWindow || 1500;    // max samples to keep
+    this.SHORT_WINDOW = opts.shortWindow || 150;   // recent window
+    this.MIN_SAMPLES = opts.minSamples || 100;
 
-    // Per-sensor state: circular buffers + running stats
     this.sensors = {};
     this.initSensor('hr');
     this.initSensor('spo2');
@@ -17,84 +16,126 @@ export class RecursiveAnalyzer {
 
   initSensor(name) {
     this.sensors[name] = {
-      buffer: [],
+      // Circular buffer: fixed size, reuse array
+      buffer: new Array(this.LONG_WINDOW),
+      bufferIdx: 0,      // write position in circular buffer
+      bufferSize: 0,     // actual number of samples (grows to LONG_WINDOW)
+      
+      // Cached statistics (updated incrementally)
       longMean: 0,
       longVar: 0,
       shortMean: 0,
       shortVar: 0,
-      trend: 0, // slope: (recent - past) / time
+      trend: 0,
       anomalyScore: 0,
+      
+      // Counters for incremental calculation
+      sum: 0,            // sum of all samples in buffer
+      sumSq: 0,          // sum of squares
     };
   }
 
-  // Welford's online algorithm for mean/variance (numerically stable)
-  static computeStats(arr) {
-    if (!Array.isArray(arr) || arr.length === 0) {
-      return { mean: 0, variance: 0, count: 0 };
-    }
-    let mean = 0, m2 = 0;
-    for (let i = 0; i < arr.length; i++) {
-      const delta = arr[i] - mean;
-      mean += delta / (i + 1);
-      m2 += delta * (arr[i] - mean);
-    }
-    const variance = arr.length > 1 ? m2 / (arr.length - 1) : 0;
-    return { mean, variance, count: arr.length };
-  }
-
-  // Feed in a sample for a sensor
+  // Add a sample to the circular buffer (O(1) operation)
   addSample(sensorName, value) {
     if (!(sensorName in this.sensors)) return;
 
     const state = this.sensors[sensorName];
-    state.buffer.push(Number(value) || 0);
+    const v = Number(value) || 0;
 
-    // Keep only the long window
-    if (state.buffer.length > this.LONG_WINDOW) {
-      state.buffer.shift();
+    // If buffer is full, subtract the old value before overwriting
+    if (state.bufferSize === this.LONG_WINDOW) {
+      const oldVal = state.buffer[state.bufferIdx];
+      state.sum -= oldVal;
+      state.sumSq -= oldVal * oldVal;
+    } else {
+      state.bufferSize++;
     }
 
-    // Recompute stats on each update (simple but accurate)
+    // Write new sample at current position
+    state.buffer[state.bufferIdx] = v;
+    state.sum += v;
+    state.sumSq += v * v;
+
+    // Move write position (circular)
+    state.bufferIdx = (state.bufferIdx + 1) % this.LONG_WINDOW;
+
+    // Update statistics (lazy: only when needed)
     this._updateStats(sensorName);
   }
 
+  // Compute statistics from cached sums (O(1) after add)
   _updateStats(sensorName) {
     const state = this.sensors[sensorName];
-    const buf = state.buffer;
 
-    if (buf.length < this.MIN_SAMPLES) {
+    if (state.bufferSize < this.MIN_SAMPLES) {
       state.anomalyScore = 0;
       return;
     }
 
-    // Long-term baseline (older half)
-    const longStart = Math.max(0, buf.length - this.LONG_WINDOW);
-    const longEnd = Math.max(longStart + 1, Math.floor(buf.length * 0.6));
-    const longArr = buf.slice(longStart, longEnd);
-    const longStats = RecursiveAnalyzer.computeStats(longArr);
-    state.longMean = longStats.mean;
-    state.longVar = longStats.variance;
+    // Long-term baseline: entire buffer
+    const n = state.bufferSize;
+    state.longMean = state.sum / n;
+    const variance = (state.sumSq / n) - (state.longMean * state.longMean);
+    state.longVar = Math.max(0, variance); // avoid numerical negatives
 
-    // Short-term current (recent samples)
-    const shortStart = Math.max(0, buf.length - this.SHORT_WINDOW);
-    const shortArr = buf.slice(shortStart);
-    const shortStats = RecursiveAnalyzer.computeStats(shortArr);
-    state.shortMean = shortStats.mean;
-    state.shortVar = shortStats.variance;
+    // Short-term window: last SHORT_WINDOW samples (from circular buffer)
+    const shortStart = Math.max(0, state.bufferSize - this.SHORT_WINDOW);
+    const shortArr = this._getCircularSlice(state, shortStart, state.bufferSize);
+    
+    if (shortArr.length > 0) {
+      const shortStats = this._quickStats(shortArr);
+      state.shortMean = shortStats.mean;
+      state.shortVar = shortStats.variance;
+    } else {
+      state.shortMean = state.longMean;
+      state.shortVar = state.longVar;
+    }
 
-    // Trend: (short mean - long mean) normalized by long std dev
+    // Trend and anomaly score
     const longStd = Math.sqrt(Math.max(state.longVar, 1e-6));
     state.trend = (state.shortMean - state.longMean) / longStd;
 
-    // Anomaly score: combine mean shift + variance surge
-    // Idea: if short-term deviates from baseline OR shows high variance, flag it
-    const meanShift = Math.abs(state.trend);
+    const meanShift = Math.tanh(Math.abs(state.trend));
     const shortStd = Math.sqrt(Math.max(state.shortVar, 1e-6));
-    const varianceSurge = shortStd / Math.max(longStd, 1e-6); // ratio > 1 = more variance now
+    const varianceSurge = Math.tanh(Math.max(0, shortStd / longStd - 1));
 
-    // Simple heuristic: weight trend change + variance spike
-    state.anomalyScore = 0.6 * Math.tanh(meanShift) + 0.4 * Math.tanh(varianceSurge - 1);
-    state.anomalyScore = Math.max(0, Math.min(1, state.anomalyScore)); // clamp to [0, 1]
+    state.anomalyScore = Math.max(0, Math.min(1, 0.6 * meanShift + 0.4 * varianceSurge));
+  }
+
+  // Extract a slice from circular buffer without copying entire array
+  _getCircularSlice(state, start, end) {
+    const result = [];
+    const len = end - start;
+    if (len <= 0) return result;
+
+    for (let i = 0; i < len; i++) {
+      const idx = (state.bufferIdx - state.bufferSize + start + i) % this.LONG_WINDOW;
+      if (idx < 0) {
+        // Handle negative modulo in JS
+        result.push(state.buffer[idx + this.LONG_WINDOW]);
+      } else {
+        result.push(state.buffer[idx]);
+      }
+    }
+    return result;
+  }
+
+  // Quick stats for short window (small array, safe to compute)
+  _quickStats(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) {
+      return { mean: 0, variance: 0 };
+    }
+
+    let sum = 0, sumSq = 0;
+    for (let i = 0; i < arr.length; i++) {
+      sum += arr[i];
+      sumSq += arr[i] * arr[i];
+    }
+
+    const mean = sum / arr.length;
+    const variance = Math.max(0, (sumSq / arr.length) - (mean * mean));
+
+    return { mean, variance };
   }
 
   // Compute combined delirium risk from all sensors
@@ -106,7 +147,6 @@ export class RecursiveAnalyzer {
       accel: this.sensors.accel.anomalyScore,
     };
 
-    // Weighted combination: focus on HR/SPO2 variability, accel/temp as secondary
     const risk =
       0.35 * scores.hr +
       0.30 * scores.spo2 +
@@ -123,7 +163,7 @@ export class RecursiveAnalyzer {
     };
   }
 
-  // Reset state (e.g., on patient change)
+  // Reset state (e.g., on patient change or mode switch)
   reset() {
     this.initSensor('hr');
     this.initSensor('spo2');

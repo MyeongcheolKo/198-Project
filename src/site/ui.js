@@ -97,7 +97,11 @@ export function setRawValues(values) {
     console.debug('[ui] setRawValues called before initUI');
     return;
   }
-  const fmt = (v) => (v === null || v === undefined ? '—' : v);
+  const fmt = (v) => {
+    if (v === null || v === undefined) return '—';
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(2) : '—';
+  };
 
   els.raw.innerHTML = `
     <li><strong>AcX:</strong> ${fmt(values.AcX)}</li>
@@ -107,6 +111,8 @@ export function setRawValues(values) {
     <li><strong>Magnitude:</strong> ${fmt(values.Magnitude)}</li>
     <li><strong>SPO2:</strong> ${fmt(values.SPO2)}</li>
     <li><strong>Temp:</strong> ${fmt(values.Temp)}</li>
+    <li><strong>RMSSD (ms):</strong> ${fmt(values.RMSSD)}</li>
+    <li><strong>SDNN (ms):</strong> ${fmt(values.SDNN)}</li>
   `;
 }
 
