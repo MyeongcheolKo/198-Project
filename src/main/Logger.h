@@ -53,7 +53,7 @@ public:
   }
   static void record(FirebaseJson* content, const char id[], auto data) {
     if (Firebase.ready()) {
-      content->set((std::string(id) + "/[" + std::to_string(Logger::m_index) + "]/stringValue").c_str(), std::to_string(data).c_str());
+      content->set((std::string(id) + "/[" + std::to_string(Logger::m_index) + "]/integerValue").c_str(), std::to_string(data).c_str());
     } else {
       Serial.println("Firebase is not ready.");
     }

@@ -16,6 +16,7 @@ private:
   int16_t m_AcX;
   int16_t m_AcY;
   int16_t m_AcZ;
+  int16_t m_magnitude;
   int16_t m_temp;
   int16_t m_GyX;
   int16_t m_GyY;

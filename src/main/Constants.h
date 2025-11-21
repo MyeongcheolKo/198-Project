@@ -4,10 +4,10 @@
 class Constants {
 public:
   static const uint32_t BAUD_RATE{ 115200 };
-  static const bool SERIALDISPLAY{ false };
+  static const bool SERIALDISPLAY{ true };
   static const bool LOGGING{ true };
-  static const uint16_t RECORDING_PERIOD{ 100 };
-  static const uint16_t LOGGING_PERIOD{ 2000 };
+  static const uint16_t RECORDING_PERIOD{ 50 };
+  static const uint16_t LOGGING_PERIOD{ 1000 };
 
   static const uint16_t SDA{ 21 };
   static const uint16_t SCL{ 22 };
@@ -27,6 +27,7 @@ public:
     static constexpr const char *ACX_ID{ "fields/AcX/arrayValue/values" };
     static constexpr const char *ACY_ID{ "fields/AcY/arrayValue/values" };
     static constexpr const char *ACZ_ID{ "fields/AcZ/arrayValue/values" };
+    static constexpr const char *MAGNITUDE_ID{ "fields/Magnitude/arrayValue/values" };
   };
 
   class TemperatureSensor {
@@ -39,10 +40,15 @@ public:
 
   class PulseOximeter {
   public:
-    static const uint16_t RATE_SIZE{ 4 };  //Increase this for more averaging. 4 is good.
-    static constexpr float WEIGHT{ 0.9 };
-    static constexpr const char *IR_ID{ "fields/IR/arrayValue/values" };
-    static constexpr const char *BPM_ID{ "fields/BPM/arrayValue/values" };
-    static constexpr const char *AVG_BPM_ID{ "fields/ABPM/arrayValue/values" };
+    static const int8_t POWER_LEVEL = 60;
+    static const int8_t SAMPLE_AVERAGE = 4;
+    static const int8_t LED_MODE = 2;
+    static const int SAMPLE_RATE = 100;
+    static const int PULSE_WIDTH = 411;
+    static const int ADC_RANGE = 4096;
+    static const uint32_t BUFFER_LENGTH{ 100 };
+    static const uint32_t WINDOW_LENGTH{ BUFFER_LENGTH / 4 };
+    static constexpr const char *HR_ID{ "fields/HR/arrayValue/values" };
+    static constexpr const char *SPO2_ID{ "fields/SPO2/arrayValue/values" };
   };
 };

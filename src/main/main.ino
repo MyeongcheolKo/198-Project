@@ -34,9 +34,9 @@ void loop() {
   pulseOximeter->update();
 
   if (Constants::SERIALDISPLAY) {
+    pulseOximeter->display();
     accelerometer->display();
     temperatureSensor->display();
-    pulseOximeter->display();
   }
 
   if (Constants::LOGGING) {

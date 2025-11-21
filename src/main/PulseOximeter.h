@@ -15,10 +15,11 @@ public:
 
 private:
   MAX30105 m_particleSensor;
-  uint8_t m_rates[Constants::PulseOximeter::RATE_SIZE]{};  //Array of heart rates
-  uint8_t m_rateSpot;
-  uint32_t m_lastBeat;  //Time at which the last beat occurred
-  float m_beatsPerMinute;
-  uint8_t m_beatAvg;
-  uint32_t m_irValue;
+  uint32_t m_irBuffer[100];   //infrared LED sensor data
+  uint32_t m_redBuffer[100];  //red LED sensor data
+  int32_t m_spo2;             //SPO2 value
+  int8_t m_validSPO2;         //indicator to show if the SPO2 calculation is valid
+  int32_t m_heartRate;        //heart rate value
+  int8_t m_validHeartRate;    //indicator to show if the heart rate calculation is valid
+  bool m_startUp;
 };
