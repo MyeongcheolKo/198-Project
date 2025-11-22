@@ -51,4 +51,17 @@ public:
     static constexpr const char *HR_ID{ "fields/HR/arrayValue/values" };
     static constexpr const char *SPO2_ID{ "fields/SPO2/arrayValue/values" };
   };
+
+  class Display {
+  public:
+    static const uint8_t SCREEN_WIDTH = 128;
+    static const uint8_t SCREEN_HEIGHT = 64;
+    static const uint8_t SCREEN_ADDRESS = 0x3D;
+
+    static const int BUTTON_PIN = 2;
+    static const int LED_PIN = 12;
+    static const int BUZZER_PIN = 4;
+    static const int BUTTON_DELAY = 100;
+    static const unsigned long LONG_PRESS_TIME = 1000;
+  };
 };
