@@ -8,11 +8,11 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 
-const int button_pin{2};
-const int led_pin{12};
-const int buzzer_pin{4};
+const int BUTTON_PIN{2};
+const int LED_PIN{12};
+const int BUZZER_PIN{4};
 
-const int button_delay{100};
+const int BUTTON_DELAY{100};
 const unsigned long LONG_PRESS_TIME = 1000;  
 
 int last_pressed_time{};
@@ -60,8 +60,8 @@ void displayRealtimeData() {
 }
 
 void setup() {
-  pinMode(button_pin, INPUT_PULLUP);
-  pinMode(buzzer_pin, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(BUZZER_PIN, OUTPUT);
   Serial.begin(9600);
 
   Wire.begin(21,22);
@@ -80,7 +80,7 @@ void setup() {
 }
 
 void loop() {
-  int button = digitalRead(button_pin);
+  int button = digitalRead(BUTTON_PIN);
 
   // Button just pressed (falling edge)
   if(button == 0 && last_button == 1) {
@@ -111,7 +111,7 @@ void loop() {
       
       display.display();
       
-      tone(buzzer_pin, 440, 125);
+      tone(BUZZER_PIN, 440, 125);
       
       Serial.println("----------");
     }
@@ -122,7 +122,7 @@ void loop() {
     unsigned long press_duration = millis() - button_press_start;
     
     // Short press only works in NORMAL mode (not realtime)
-    if(!long_press_triggered && press_duration > button_delay && !realtime_mode) {
+    if(!long_press_triggered && press_duration > BUTTON_DELAY && !realtime_mode) {
       stop_program = !stop_program;
       
       display.clearDisplay();
@@ -137,7 +137,7 @@ void loop() {
       }
       
       display.display();
-      tone(buzzer_pin, 523, 250);
+      tone(BUZZER_PIN, 523, 250);
       Serial.println("----------");
     }
     // in realtime mode and short press, switch displayed data
@@ -147,7 +147,7 @@ void loop() {
       if (current_display > 4){
         current_display = 1;
       }
-      tone(buzzer_pin, 523, 250);
+      tone(BUZZER_PIN, 523, 250);
       Serial.println(current_display);
     }
   }
