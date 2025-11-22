@@ -1,0 +1,12 @@
+[
+  "hr_mean_bpm",
+  "hrv_sdnn_ms",
+  "hrv_rmssd_ms",
+  "hrv_pnn50",
+  "accel_mean_mag",
+  "accel_std_mag",
+  "accel_activity_frac",
+  "temp_mean",
+  "temp_std",
+  "temp_slope_per_min"
+]

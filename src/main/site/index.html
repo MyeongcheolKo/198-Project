@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" data-risk="low">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Delirium Monitor (SensorData - Firestore)</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+</head>
+<body>
+  <header>
+    <h1>Delirium Monitor</h1>
+    <div class="status">
+      <span id="status" data-state="down" aria-live="polite">Disconnected</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Settings">
+      <label class="mute">
+        <input type="checkbox" id="mute" />
+        Mute alerts
+      </label>
+      <!-- NEW: Scoring mode selector -->
+      <label>
+        Scoring Mode:
+        <select id="scoringMode">
+          <option value="blend">Blended (50/50)</option>
+          <option value="weighted">Weighted (original)</option>
+          <option value="recursive">Recursive (variance-based)</option>
+          <option value="clustering">Clustering (ML-based)</option>
+        </select>
+      </label>
+      <span class="hint">Live from Firestore: <code>SensorData</code></span>
+    </section>
+
+    <section class="cards">
+      <div class="card score">
+        <div class="label">Current Risk</div>
+        <div class="value" id="scoreValue">0.00</div>
+        <div class="risk" id="riskLabel">LOW</div>
+        <div class="updated">Updated: <span id="lastUpdated">—</span></div>
+      </div>
+
+      <div class="card notes">
+        <p>
+          <strong>Note:</strong>
+          This dashboard shows real-life data streamed directly from our delirium detection device.
+        </p>
+      </div>
+
+      <div class="card raw">
+        <div class="label">Latest Sensor Readings</div>
+        <ul id="rawValues">
+          <li><strong>AcX:</strong> —</li>
+          <li><strong>AcY:</strong> —</li>
+          <li><strong>AcZ:</strong> —</li>
+          <li><strong>HR:</strong> —</li>
+          <li><strong>Magnitude:</strong> —</li>
+          <li><strong>SPO2:</strong> —</li>
+          <li><strong>Temp:</strong> —</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recent events</h2>
+      <table id="events">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Score</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- App entrypoint -->
+  <script type="module" src="./bootstrap.js"></script>
+</body>
+</html>
