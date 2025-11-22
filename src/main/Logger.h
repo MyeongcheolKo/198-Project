@@ -66,7 +66,6 @@ public:
         Logger::m_lastTime = time;
         content->clear();
         Logger::m_index = 0;
-        Serial.println("Data Sent Successfully");
       } else {
         Serial.println(fbdo.errorReason());
       }
