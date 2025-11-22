@@ -7,25 +7,64 @@
 #define SCREEN_ADDRESS 0x3D 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-int last_pressed_time{};
-bool stop_program{false};
-int last_button{1};
 
 const int button_pin{2};
 const int led_pin{12};
-const int button_delay{100};
 const int buzzer_pin{4};
 
+const int button_delay{100};
+const unsigned long LONG_PRESS_TIME = 1000;  
+
+int last_pressed_time{};
+bool stop_program{false};
+int last_button{1};
 bool realtime_mode{false};
 unsigned long button_press_start{0};
 bool long_press_triggered{false};
-const unsigned long LONG_PRESS_TIME = 1000;  // 1 second
+int current_display{0};
 
+void displayRealtimeData() {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setCursor(0, 0);
+  
+  switch(current_display) {
+    case 0:
+      display.println("Realtime");
+      display.println("Data mode");
+      break;
+
+    case 1:
+      display.println("Heart rate:");
+      // Serial.println("Heart rate");
+      break;
+      
+    case 2:
+      display.println("SPO2:");
+      // Serial.println("SPO2");
+
+      break;
+      
+    case 3:
+      display.println("Net Accel:");
+      // Serial.println("Net Accel.");
+      break;
+      
+    case 4:
+      display.println("Temp:");
+      // Serial.println("Temp");
+      break;
+  }
+  
+  display.display();
+}
 
 void setup() {
   pinMode(button_pin, INPUT_PULLUP);
   pinMode(buzzer_pin, OUTPUT);
   Serial.begin(9600);
+
+  Wire.begin(21,22);
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -35,8 +74,8 @@ void setup() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
-  display.setCursor(0, 10);
-  display.println("Ready");
+  display.setCursor(0, 0);
+  display.println("Powered On");
   display.display();
 }
 
@@ -61,9 +100,9 @@ void loop() {
       display.setCursor(0, 0);
       
       if(realtime_mode) {
-        display.println("Realtime");
-        display.println("Mode ON");
         Serial.println("Entered realtime mode");
+        current_display = 0;
+        // displayRealtimeData();
       } else {
         display.println("Realtime");
         display.println("Mode OFF");
@@ -72,9 +111,6 @@ void loop() {
       
       display.display();
       
-      // Double beep for long press
-      tone(buzzer_pin, 440, 125);
-      delay(125);
       tone(buzzer_pin, 440, 125);
       
       Serial.println("----------");
@@ -104,22 +140,22 @@ void loop() {
       tone(buzzer_pin, 523, 250);
       Serial.println("----------");
     }
-    // If in realtime mode and short press, ignore it
+    // in realtime mode and short press, switch displayed data
     else if(!long_press_triggered && realtime_mode) {
-
-      Serial.println("Short press ignored in realtime mode");
+      
+      current_display++;
+      if (current_display > 4){
+        current_display = 1;
+      }
+      tone(buzzer_pin, 523, 250);
+      Serial.println(current_display);
     }
   }
   
+
   // Display realtime data if in realtime mode
   if(realtime_mode && button == 1) {  // Only update when button not pressed
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.println("Realtime");
-    display.setCursor(0, 20);
-    display.print("Time:");
-    display.println(millis() / 1000);
-    display.display();
+    displayRealtimeData();
   }
   
   last_button = button;
