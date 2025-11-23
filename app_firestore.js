@@ -13,7 +13,6 @@ import {
   limit,
   onSnapshot,
   query,
-  orderBy,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 
@@ -167,17 +166,19 @@ function normalizeTempRisk(temp) {
 }
 
 // ===== WEIGHTED METHOD =====
-function computeWeightedScore({ hrArr, spo2Arr, magArr, tempArr }, idx, preRMSSD = null, preSDNN = null) {
-  const rmssd = preRMSSD ?? calculateRMSSD(hrArr.slice(Math.max(0, idx - 19), idx + 1));
-  const sdnn = preSDNN ?? calculateSDNN(hrArr.slice(Math.max(0, idx - 19), idx + 1));
-
+function computeWeightedScore({ hrArr, spo2Arr, magArr, tempArr }, idx) {
+  const windowSize = Math.min(20, hrArr.length);
+  const hrWindow = hrArr.slice(Math.max(0, idx + 1 - windowSize), idx + 1);
+  const rmssd = calculateRMSSD(hrWindow);
+  const sdnn = calculateSDNN(hrWindow);
+  
   const rmssdRisk = normalizeRMSSDRisk(rmssd);
   const sdnnRisk = normalizeSDNNRisk(sdnn);
   const hrvRisk = 0.5 * rmssdRisk + 0.5 * sdnnRisk;
 
-  const spo2 = normalizeSpo2Risk(spo2Arr[idx]);
-  const accel = normalizeAccelRisk(magArr[idx]);
-  const temp = normalizeTempRisk(tempArr[idx]);
+  const spo2 = normalizeSpo2Risk(spo2Arr && spo2Arr[idx] != null ? spo2Arr[idx] : null);
+  const accel = normalizeAccelRisk(magArr && magArr[idx] != null ? magArr[idx] : null);
+  const temp = normalizeTempRisk(tempArr && tempArr[idx] != null ? tempArr[idx] : null);
 
   const score = WEIGHTS.hrv * hrvRisk + WEIGHTS.spo2 * spo2 + WEIGHTS.accel * accel + WEIGHTS.temp * temp;
   return { score: clamp01(score), method: 'weighted' };
@@ -210,20 +211,21 @@ async function loadClusterModel() {
     clusterModel = {
       centroids: centroidsData.centroids,
       nClusters: centroidsData.n_clusters,
-      metadata: metadataData,       // <-- attach metadata here
+      featureNames: metadataData.feature_names,
+      scalerMean: metadataData.scaler_mean,
+      scalerScale: metadataData.scaler_scale,
       highRisk: metadataData.high_risk_threshold,
       moderateRisk: metadataData.moderate_risk_threshold,
     };
 
     console.log(
-      `[clustering] Model loaded: ${clusterModel.nClusters} clusters, ${metadataData.feature_names.length} features`
+      `[clustering] Model loaded: ${clusterModel.nClusters} clusters, ${clusterModel.featureNames.length} features`
     );
 
   } catch (err) {
     console.warn('[clustering] Could not load model:', err.message);
   }
 }
-
 
 function euclideanDistance(v1, v2) {
   let sum = 0;
@@ -350,72 +352,34 @@ function computeRiskScore(sensors, idx) {
 // ===== Data Processing =====
 function flattenPacketDocs(packetDocs) {
   if (!packetDocs.length) return [];
-
+  const docs = [...packetDocs].reverse();
+  const now = Date.now();
   const series = [];
+  const docsCount = docs.length;
 
-  for (let docIndex = packetDocs.length - 1; docIndex >= 0; docIndex--) { // newest → oldest
-    const doc = packetDocs[docIndex];
+  for (let dIdx = 0; dIdx < docsCount; dIdx++) {
+    const doc = docs[dIdx];
     const data = doc.data() || {};
     const sensors = extractSensorArrays(data);
 
-    const L = Math.max(
-      sensors.hr?.length || 0,
-      sensors.spo2?.length || 0,
-      sensors.temp?.length || 0,
-      sensors.mag?.length || 0
-    );
+    const lengths = [sensors.hr?.length, sensors.spo2?.length, sensors.temp?.length, sensors.mag?.length].filter(Boolean);
+    const L = lengths.length ? Math.max(...lengths) : 0;
     if (!L) continue;
 
-    // Precompute HR RMSSD/SDNN sliding window
-    const windowSize = 20;
-    const hrRMSSD = new Array(L).fill(null);
-    const hrSDNN = new Array(L).fill(null);
-
-    if (sensors.hr && sensors.hr.length >= 2) {
-      for (let i = 0; i < L; i++) {
-        const start = Math.max(0, i + 1 - windowSize);
-        const hrWindow = sensors.hr.slice(start, i + 1);
-        hrRMSSD[i] = calculateRMSSD(hrWindow);
-        hrSDNN[i] = calculateSDNN(hrWindow);
-      }
-    }
-
     for (let i = 0; i < L; i++) {
-      const hrVal = sensors.hr || [];
-      const spo2Val = sensors.spo2 || [];
-      const magVal = sensors.mag || [];
-      const tempVal = sensors.temp || [];
+      const { score } = computeRiskScore({
+        hrArr: sensors.hr || [],
+        spo2Arr: sensors.spo2 || [],
+        magArr: sensors.mag || [],
+        tempArr: sensors.temp || [],
+      }, i);
 
-      // Weighted score uses precomputed RMSSD/SDNN
-      let weightedScore = computeWeightedScore({
-        hrArr: hrVal,
-        spo2Arr: spo2Val,
-        magArr: magVal,
-        tempArr: tempVal,
-      }, i, hrRMSSD[i], hrSDNN[i]); // pass precomputed values
-
-      let finalScore = weightedScore;
-
-      if (CONFIG.scoringMode === 'clustering') {
-        finalScore = computeClusteringScore({ hrArr: hrVal, spo2Arr: spo2Val, magArr: magVal, tempArr: tempVal }, i);
-      } else if (CONFIG.scoringMode === 'blend') {
-        const clustering = computeClusteringScore({ hrArr: hrVal, spo2Arr: spo2Val, magArr: magVal, tempArr: tempVal }, i);
-        finalScore = {
-          score: clamp01(CONFIG.BLEND_ALPHA * clustering.score + (1 - CONFIG.BLEND_ALPHA) * weightedScore.score),
-          method: 'blend',
-        };
-      }
-
-      // Timestamp handling
-      const tsMs = tryGetTimestampMsFromDoc(doc) ?? (Date.now() - (L - 1 - i) * CONFIG.INTRA_PACKET_INTERVAL_MS);
-      const ts = new Date(tsMs).toISOString();
-
-      series.push({ timestamp: ts, score: finalScore.score, risk: riskFromScore(finalScore.score) });
+      const samplesFromEnd = (docsCount - 1 - dIdx) * L + (L - 1 - i);
+      const ts = new Date(now - samplesFromEnd * CONFIG.INTRA_PACKET_INTERVAL_MS).toISOString();
+      series.push({ timestamp: ts, score, risk: riskFromScore(score) });
     }
   }
-
-  // Keep only the latest MAX_POINTS
-  return series.slice(0, CONFIG.MAX_POINTS);
+  return series.slice(-CONFIG.MAX_POINTS);
 }
 
 function lastOf(arr) {
@@ -456,11 +420,7 @@ let unsubscribe = null;
 let lastRMSSD = null, lastSDNN = null;
 
 function startSensorStream() {
-  const qRef = query(
-    collection(db, CONFIG.COLLECTION_NAME),
-    orderBy('timestamp', 'asc'),  // oldest → newest
-    limit(CONFIG.PACKETS_FETCH)
-  );
+  const qRef = query(collection(db, CONFIG.COLLECTION_NAME), limit(CONFIG.PACKETS_FETCH));
 
   unsubscribe = onSnapshot(qRef, (snapshot) => {
     try {
@@ -468,7 +428,7 @@ function startSensorStream() {
       setConnected(true);
 
       const docsForSeries = sortDocsByTimestamp(snapshot.docs);
-      const series = flattenPacketDocs(docsForSeries); // newest-first handled naturally
+      const series = flattenPacketDocs(docsForSeries);
 
       if (!series.length) return;
 
@@ -476,21 +436,25 @@ function startSensorStream() {
       setScore(last.score, last.risk, last.timestamp);
       setHistory(series);
 
-      // Aggregate HR for HRV (only last N points)
+      // Aggregate HR from all docs for HRV display
       const aggregatedHRArray = [];
-      for (const doc of docsForSeries) {
-        const docHRArray = toNumArr(doc.data()?.HR);
+      for (let i = 0; i < docsForSeries.length; i++) {
+        const doc = docsForSeries[i];
+        const docData = doc.data ? doc.data() : {};
+        const docHRArray = docData.HR ? toNumArr(docData.HR) : [];
         aggregatedHRArray.push(...docHRArray);
       }
-      const lastN = 50; // limit for performance
-      const recentHR = aggregatedHRArray.slice(-lastN);
 
-      if (recentHR.length >= 5) {
-        lastRMSSD = calculateRMSSD(recentHR);
-        lastSDNN = calculateSDNN(recentHR);
+      if (aggregatedHRArray.length >= 5) {
+        const rmssd = calculateRMSSD(aggregatedHRArray);
+        const sdnn = calculateSDNN(aggregatedHRArray);
+        if (rmssd !== null) lastRMSSD = rmssd;
+        if (sdnn !== null) lastSDNN = sdnn;
       }
 
-      const latestDocData = docsForSeries[docsForSeries.length - 1]?.data() || {};
+      const latestDoc = docsForSeries[docsForSeries.length - 1];
+      const latestDocData = (latestDoc && latestDoc.data) ? latestDoc.data() || {} : {};
+
       setRawValues({
         AcX: lastOf(latestDocData.AcX) ?? '—',
         AcY: lastOf(latestDocData.AcY) ?? '—',
@@ -502,7 +466,6 @@ function startSensorStream() {
         RMSSD: lastRMSSD,
         SDNN: lastSDNN,
       });
-
     } catch (err) {
       console.error('[firestore] error:', err);
     }
