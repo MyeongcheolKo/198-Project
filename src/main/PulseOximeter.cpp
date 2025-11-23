@@ -84,9 +84,9 @@ void PulseOximeter::logging(FirebaseJson* json) {
 }
 
 uint8_t PulseOximeter::getHeartRate(){
-  return m_validHeartRate;
+  return m_heartRate;
 }
 
 uint8_t PulseOximeter::getSPO2(){
-  return m_validSPO2;
+  return m_spo2;
 }

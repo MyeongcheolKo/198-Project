@@ -1,7 +1,3 @@
-#include "Constants.h"
-#include "Accelerometer.h"
-#include "TemperatureSensor.h"
-#include "PulseOximeter.h"
 #include "Display.h"
 #include <Wire.h>
 #include "Logger.h"
@@ -13,7 +9,7 @@ Accelerometer *accelerometer;
 TemperatureSensor *temperatureSensor;
 PulseOximeter *pulseOximeter;
 FirebaseJson *json;
-Display *display;
+Display *oled;
 
 uint32_t lastTime{ 0 };
 
@@ -25,7 +21,7 @@ void setup() {
   temperatureSensor = new TemperatureSensor(Constants::TemperatureSensor::ADDRESS);
   pulseOximeter = new PulseOximeter();
 
-  display = new Display(Constants::Display::SCREEN_ADDRESS, accelerometer, 
+  oled = new Display(Constants::Display::SCREEN_ADDRESS, accelerometer, 
             temperatureSensor, pulseOximeter);
 
   if (Constants::LOGGING) {
@@ -40,24 +36,22 @@ void loop() {
   temperatureSensor->update();
   pulseOximeter->update();
 
-  if (Constants::SERIALDISPLAY) {
-    pulseOximeter->display();
-    accelerometer->display();
-    temperatureSensor->display();
-  }
+  // if (Constants::SERIALDISPLAY) {
+  //   pulseOximeter->display();
+  //   accelerometer->display();
+  //   temperatureSensor->display();
+  // }
 
-  if (Constants::LOGGING) {
-    uint32_t time{ millis() };
-    if (time - lastTime > Constants::RECORDING_PERIOD) {
-      accelerometer->logging(json);
-      temperatureSensor->logging(json);
-      pulseOximeter->logging(json);
-      lastTime = time;
-    }
-    Logger::send(json);
-  }
+  // if (Constants::LOGGING) {
+  //   uint32_t time{ millis() };
+  //   if (time - lastTime > Constants::RECORDING_PERIOD) {
+  //     accelerometer->logging(json);
+  //     temperatureSensor->logging(json);
+  //     pulseOximeter->logging(json);
+  //     lastTime = time;
+  //   }
+  //   Logger::send(json);
+  // }
 
-  if (display) {
-    display->update();
-  }
+  oled->update();
 }

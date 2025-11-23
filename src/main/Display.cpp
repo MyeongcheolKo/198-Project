@@ -1,17 +1,13 @@
 #include "Display.h"
-#include "Constants.h"
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
-#include "Accelerometer.h"
-#include "PulseOximeter.h"
-#include "TemperatureSensor.h"
 
 Display::Display(uint8_t address, Accelerometer* accel, 
             TemperatureSensor* temp, PulseOximeter* pulse){
     // allocate display object
-    display = new Adafruit_SSD1306(Constants::Display::SCREEN_WIDTH, Constants::Display::SCREEN_HEIGHT, &Wire, -1);
+    m_display = new Adafruit_SSD1306(Constants::Display::SCREEN_WIDTH, Constants::Display::SCREEN_HEIGHT, &Wire, -1);
 
     pinMode(Constants::Display::BUTTON_PIN, INPUT_PULLUP);
     pinMode(Constants::Display::BUZZER_PIN, OUTPUT);
@@ -21,67 +17,68 @@ Display::Display(uint8_t address, Accelerometer* accel,
     m_pulseOx = pulse;
 
     // Attempt to initialize the display. Wire is expected to be initialized by main.
-    if (!display->begin(SSD1306_SWITCHCAPVCC, address))
+    if (!m_display->begin(SSD1306_SWITCHCAPVCC, address))
     {
         Serial.println(F("SSD1306 allocation failed"));
         // fail silently; loop() can continue but display operations will be no-ops
     }
 
-    display->clearDisplay();
-    display->setTextSize(2);
-    display->setTextColor(WHITE);
-    display->setCursor(0, 0);
-    display->println("Powered On");
-    display->display();
+    m_display->clearDisplay();
+    m_display->setTextSize(2);
+    m_display->setTextColor(WHITE);
+    m_display->setCursor(0, 0);
+    m_display->println("Powered On");
+    m_display->display();
+    Serial.println("powered on");
 }
 
 Display::~Display()
 {
-    if (display)
+    if (m_display)
     {
-        delete display;
-        display = nullptr;
+        delete m_display;
+        m_display = nullptr;
     }
 }
 
 void Display::displayRealtimeData()
 {
-    if (!display)
-        return;
-
-    display->clearDisplay();
-    display->setTextSize(2);
-    display->setCursor(0, 0);
+    m_display->clearDisplay();
+    m_display->setTextSize(2);
+    m_display->setCursor(0, 0);
 
     switch (current_display)
     {
     case 0:
-        display->println("Realtime");
-        display->println("Data mode");
+        m_display->println("Realtime");
+        m_display->println("Data mode");
         break;
 
     case 1:
-        display->println("Heart rate:");
-        display->println(m_pulseOx->getHeartRate());
+        m_display->println("Heart rate:");
+        m_display->println(m_pulseOx->getHeartRate());
+        Serial.println(m_pulseOx->getHeartRate());
         break;
-
     case 2:
-        display->println("SPO2:");
-        display->println(m_pulseOx->getSPO2());
+        m_display->println("SPO2:");
+        m_display->println(m_pulseOx->getSPO2());
+        Serial.println(m_pulseOx->getSPO2());
         break;
 
     case 3:
-        display->println("Net Accel:");
-        display->println(m_accelerometer->getMagnitude());
+        m_display->println("Net Accel:");
+        m_display->println(m_accelerometer->getMagnitude());
+        Serial.println(m_accelerometer->getMagnitude());
         break;
 
     case 4:
-        display->println("Temp:");
-        display->println(m_tempSensor->getTemp());
+        m_display->println("Temp:");
+        m_display->println(m_tempSensor->getTemp());
+        Serial.println(m_tempSensor->getTemp());
         break;
     }
 
-    display->display();
+    m_display->display();
 }
 
 void Display::update()
@@ -103,10 +100,10 @@ void Display::update()
 
             realtime_mode = !realtime_mode;
 
-            if (display)
+            if (m_display)
             {
-                display->clearDisplay();
-                display->setCursor(0, 0);
+                m_display->clearDisplay();
+                m_display->setCursor(0, 0);
 
                 if (realtime_mode)
                 {
@@ -115,12 +112,12 @@ void Display::update()
                 }
                 else
                 {
-                    display->println("Realtime");
-                    display->println("Mode OFF");
+                    m_display->println("Realtime");
+                    m_display->println("Mode OFF");
                     Serial.println("Exited realtime mode");
                 }
 
-                display->display();
+                m_display->display();
             }
 
             tone(Constants::Display::BUZZER_PIN, 440, 125);
@@ -136,23 +133,23 @@ void Display::update()
         {
             stop_program = !stop_program;
 
-            if (display)
+            if (m_display)
             {
-                display->clearDisplay();
-                display->setCursor(0, 0);
+                m_display->clearDisplay();
+                m_display->setCursor(0, 0);
 
                 if (stop_program)
                 {
-                    display->println("Stopped");
+                    m_display->println("Stopped");
                     Serial.println("Stopped");
                 }
                 else
                 {
-                    display->println("Resumed");
+                    m_display->println("Resumed");
                     Serial.println("Resumed");
                 }
 
-                display->display();
+                m_display->display();
             }
 
             tone(Constants::Display::BUZZER_PIN, 523, 250);

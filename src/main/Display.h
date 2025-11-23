@@ -3,6 +3,10 @@
 
 #include <cstdint>
 #include <Adafruit_SSD1306.h>
+#include "Constants.h"
+#include "Accelerometer.h"
+#include "PulseOximeter.h"
+#include "TemperatureSensor.h"
 
 class Display {
 public:
@@ -22,7 +26,7 @@ private:
     int current_display{0};
 
     uint8_t address{0};
-    Adafruit_SSD1306 *display{nullptr};
+    Adafruit_SSD1306 *m_display{nullptr};
     Accelerometer* m_accelerometer;
     TemperatureSensor* m_tempSensor;
     PulseOximeter* m_pulseOx;
