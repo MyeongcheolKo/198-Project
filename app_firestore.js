@@ -186,26 +186,42 @@ function computeWeightedScore({ hrArr, spo2Arr, magArr, tempArr }, idx) {
 
 // ===== CLUSTERING METHOD (ML-based) =====
 let clusterModel = null;
-
 async function loadClusterModel() {
   try {
-    const modelDocRef = doc(db, 'models', 'ClusterModel');
-    const modelDocSnap = await getDoc(modelDocRef);
+    const centroidsRef = doc(db, 'models', 'centroids');
+    const metadataRef = doc(db, 'models', 'metadata');
 
-    if (modelDocSnap.exists) {
-      const modelData = modelDocSnap.data();
-      if (modelData.centroids && modelData.metadata) {
-        clusterModel = {
-          centroids: modelData.centroids,
-          metadata: modelData.metadata,
-        };
-        console.log('[clustering] Model loaded with', clusterModel.centroids.length, 'clusters');
-      } else {
-        console.warn('[clustering] Centroids or metadata not found in ClusterModel document');
-      }
-    } else {
-      console.warn('[clustering] ClusterModel document not found');
+    const [centroidsSnap, metadataSnap] = await Promise.all([
+      getDoc(centroidsRef),
+      getDoc(metadataRef)
+    ]);
+
+    if (!centroidsSnap.exists()) {
+      console.warn('[clustering] centroids document not found');
+      return;
     }
+    if (!metadataSnap.exists()) {
+      console.warn('[clustering] metadata document not found');
+      return;
+    }
+
+    const centroidsData = centroidsSnap.data();
+    const metadataData  = metadataSnap.data();
+
+    clusterModel = {
+      centroids: centroidsData.centroids,
+      nClusters: centroidsData.n_clusters,
+      featureNames: metadataData.feature_names,
+      scalerMean: metadataData.scaler_mean,
+      scalerScale: metadataData.scaler_scale,
+      highRisk: metadataData.high_risk_threshold,
+      moderateRisk: metadataData.moderate_risk_threshold,
+    };
+
+    console.log(
+      `[clustering] Model loaded: ${clusterModel.nClusters} clusters, ${clusterModel.featureNames.length} features`
+    );
+
   } catch (err) {
     console.warn('[clustering] Could not load model:', err.message);
   }
