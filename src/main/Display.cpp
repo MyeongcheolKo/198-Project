@@ -167,12 +167,33 @@ void Display::update()
             Serial.println(current_display);
         }
     }
+    unsigned long now = millis();
+
+    
 
     // Display realtime data if in realtime mode
     if (realtime_mode && button == 1)
     {
         displayRealtimeData();
     }
+    //display time if programmed not stopped and not in realtime data mode
+    else if (!stop_program && button == 1){
+        // Only update once per second
+        if (now - lastUpdate >= UPDATE_INTERVAL) {
+            lastUpdate = now;
+
+            struct tm timeinfo;
+            if (getLocalTime(&timeinfo)) {
+            strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
+            }
+        }
+        m_display->clearDisplay();
+        m_display->setCursor(0, 0);
+        m_display->println(timeStr);
+        m_display->display();
+        Serial.println(timeStr);
+    }
 
     last_button = button;
 }
+

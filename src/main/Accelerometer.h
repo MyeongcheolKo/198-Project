@@ -1,7 +1,11 @@
+#ifndef SRC_MAIN_ACCELEROMETER_H
+#define SRC_MAIN_ACCELEROMETER_H
+
 #include <cstdint>
 #include <Firebase_ESP_Client.h>
 
-class Accelerometer {
+class Accelerometer
+{
 public:
   Accelerometer(uint8_t address);
 
@@ -9,7 +13,7 @@ public:
 
   void display();
 
-  void logging(FirebaseJson* json);
+  void logging(FirebaseJson *json);
 
   uint16_t getMagnitude();
 
@@ -24,3 +28,5 @@ private:
   int16_t m_GyY;
   int16_t m_GyZ;
 };
+
+#endif // SRC_MAIN_ACCELEROMETER_H
