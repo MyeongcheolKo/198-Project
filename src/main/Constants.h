@@ -8,7 +8,7 @@ class Constants
 {
 public:
   static const uint32_t BAUD_RATE{115200};
-  static const bool SERIALDISPLAY{true};
+  static const bool SERIALDISPLAY{false};
   static const bool LOGGING{true};
   static const uint16_t RECORDING_PERIOD{50};
   static const uint16_t LOGGING_PERIOD{1000};
