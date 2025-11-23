@@ -2,7 +2,7 @@
 // Computes delirium risk from multi-sensor data using weighted/clustering/blended scoring
 
 import { firebaseConfig } from './firebase-config.js';
-import { setConnected, setScore, setHistory, setRawValues, onScoringModeChange } from './src/site/ui.js';
+import { setConnected, setScore, setHistory, setRawValues, onScoringModeChange } from './ui.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, collection, onSnapshot, query, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
