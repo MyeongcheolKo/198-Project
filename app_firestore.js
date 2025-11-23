@@ -179,8 +179,8 @@ let clusterModel = null;
 
 async function loadClusterModel() {
   try {
-    const centroidsDoc = await collection(db, 'ClusterModel').doc('centroids').get();
-    const metadataDoc = await collection(db, 'ClusterModel').doc('metadata').get();
+    const centroidsDoc = await db.collection('ClusterModel').doc('centroids').get();
+    const metadataDoc = await db.collection('ClusterModel').doc('metadata').get();
     
     if (centroidsDoc.exists && metadataDoc.exists) {
       clusterModel = {
