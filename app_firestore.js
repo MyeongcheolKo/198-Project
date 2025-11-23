@@ -352,7 +352,7 @@ function computeRiskScore(sensors, idx) {
 // ===== Data Processing =====
 function flattenPacketDocs(packetDocs) {
   if (!packetDocs.length) return [];
-  const docs = [...packetDocs];
+  const docs = [...packetDocs].reverse();
   const now = Date.now();
   const series = [];
   const docsCount = docs.length;
