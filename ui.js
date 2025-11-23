@@ -2,7 +2,7 @@
 
 const els = {};
 let pendingHistory = null;
-let scoringModeChangeCallback = null; // NEW: callback when mode changes
+let scoringModeChangeCallback = null;
 
 function q(id) {
   return document.getElementById(id);
@@ -16,16 +16,14 @@ export function initUI() {
   els.updated = q('lastUpdated');
   els.tableBody = document.querySelector('#events tbody');
   els.raw = document.getElementById('rawValues');
-  els.scoringMode = q('scoringMode'); // NEW
+  els.scoringMode = q('scoringMode');
 
   // NEW: Wire up scoring mode selector
   if (els.scoringMode) {
     els.scoringMode.addEventListener('change', (e) => {
       const newMode = e.target.value;
-      console.log('[ui] scoring mode changed to:', newMode);
-      if (scoringModeChangeCallback) {
-        scoringModeChangeCallback(newMode);
-      }
+      console.log('[ui] mode changed to:', newMode);
+      if (scoringModeChangeCallback) scoringModeChangeCallback(newMode);
     });
   }
 
@@ -97,7 +95,11 @@ export function setRawValues(values) {
     console.debug('[ui] setRawValues called before initUI');
     return;
   }
-  const fmt = (v) => (v === null || v === undefined ? '—' : v);
+  const fmt = (v) => {
+    if (v === null || v === undefined) return '—';
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(2) : '—';
+  };
 
   els.raw.innerHTML = `
     <li><strong>AcX:</strong> ${fmt(values.AcX)}</li>
@@ -107,6 +109,8 @@ export function setRawValues(values) {
     <li><strong>Magnitude:</strong> ${fmt(values.Magnitude)}</li>
     <li><strong>SPO2:</strong> ${fmt(values.SPO2)}</li>
     <li><strong>Temp:</strong> ${fmt(values.Temp)}</li>
+    <li><strong>RMSSD (ms):</strong> ${fmt(values.RMSSD)}</li>
+    <li><strong>SDNN (ms):</strong> ${fmt(values.SDNN)}</li>
   `;
 }
 
