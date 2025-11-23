@@ -1,17 +1,17 @@
-#include "Constants.h"
-#include "Accelerometer.h"
-#include "TemperatureSensor.h"
-#include "PulseOximeter.h"
 #include <Wire.h>
 #include "Logger.h"
-#include <Firebase_ESP_Client.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <time.h>
 
 Accelerometer *accelerometer;
 TemperatureSensor *temperatureSensor;
 PulseOximeter *pulseOximeter;
 FirebaseJson *json;
+Display *oled;
 
 uint32_t lastTime{ 0 };
+
 
 void setup() {
   Serial.begin(Constants::BAUD_RATE);
@@ -21,11 +21,22 @@ void setup() {
   temperatureSensor = new TemperatureSensor(Constants::TemperatureSensor::ADDRESS);
   pulseOximeter = new PulseOximeter();
 
+  oled = new Display(Constants::Display::SCREEN_ADDRESS, accelerometer, 
+            temperatureSensor, pulseOximeter);
+
   if (Constants::LOGGING) {
     Logger::begin();
     json = Logger::getJson();
     lastTime = millis();
   }
+
+  configTime(Constants::gmtOffset_sec, Constants::daylightOffset_sec, "pool.ntp.org", "time.nist.gov");
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println("Time synchronized!");
 }
 
 void loop() {
@@ -33,13 +44,16 @@ void loop() {
   temperatureSensor->update();
   pulseOximeter->update();
 
-  if (Constants::SERIALDISPLAY) {
-    pulseOximeter->display();
-    accelerometer->display();
-    temperatureSensor->display();
-  }
+  
 
-  if (Constants::LOGGING) {
+
+  // if (Constants::SERIALDISPLAY) {
+  //   pulseOximeter->display();
+  //   accelerometer->display();
+  //   temperatureSensor->display();
+  // }
+
+  if (Constants::LOGGING && oled->isRunning()) {
     uint32_t time{ millis() };
     if (time - lastTime > Constants::RECORDING_PERIOD) {
       accelerometer->logging(json);
@@ -49,4 +63,6 @@ void loop() {
     }
     Logger::send(json);
   }
+
+  oled->update();
 }

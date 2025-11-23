@@ -5,9 +5,10 @@
 #include <sys/_stdint.h>
 #include <WiFi.h>
 #include <Firebase_ESP_Client.h>
+#include "Display.h"
 
-#define WIFI_SSID "WMenglin2025UWaterloo"
-#define WIFI_PASSWORD "20070124Double!"
+#define WIFI_SSID "Kris"
+#define WIFI_PASSWORD "1234567890"
 
 #define API_KEY "AIzaSyAz-ZVd--bf83eo1OcUALI4KtXt_kXKCPQ"
 #define PROJECT_ID "ece198-d2f99"

@@ -82,3 +82,11 @@ void PulseOximeter::logging(FirebaseJson* json) {
     Logger::record(json, Constants::PulseOximeter::SPO2_ID, m_spo2);
   }
 }
+
+uint8_t PulseOximeter::getHeartRate(){
+  return m_heartRate;
+}
+
+uint8_t PulseOximeter::getSPO2(){
+  return m_spo2;
+}

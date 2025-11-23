@@ -30,3 +30,7 @@ void TemperatureSensor::logging(FirebaseJson* json) {
   Logger::record(json, Constants::TemperatureSensor::TEMP_ID, m_temp);
   // }
 }
+
+uint8_t TemperatureSensor::getTemp(){
+  return m_temp;
+}

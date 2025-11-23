@@ -1,7 +1,11 @@
+#ifndef SRC_MAIN_TEMPERATURESENSOR_H
+#define SRC_MAIN_TEMPERATURESENSOR_H
+
 #include <cstdint>
 #include <Firebase_ESP_Client.h>
 
-class TemperatureSensor {
+class TemperatureSensor
+{
 public:
   TemperatureSensor(uint8_t address);
 
@@ -9,9 +13,13 @@ public:
 
   void display();
 
-  void logging(FirebaseJson* json);
+  void logging(FirebaseJson *json);
+
+  uint8_t getTemp();
 
 private:
   uint8_t m_address;
   uint8_t m_temp;
 };
+
+#endif // SRC_MAIN_TEMPERATURESENSOR_H
