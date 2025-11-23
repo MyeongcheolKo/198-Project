@@ -436,7 +436,7 @@ function computeRiskScore(sensors, idx) {
 function flattenPacketDocs(packetDocs) {
   if (!packetDocs.length) return [];
 
-  const docs = [...packetDocs].reverse(); // copy
+  const docs = [...packetDocs]; // copy
   const now  = Date.now();
   const series = [];
 
