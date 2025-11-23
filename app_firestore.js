@@ -188,8 +188,8 @@ function computeWeightedScore({ hrArr, spo2Arr, magArr, tempArr }, idx) {
 let clusterModel = null;
 async function loadClusterModel() {
   try {
-    const centroidsRef = doc(db, 'models', 'centroids');
-    const metadataRef = doc(db, 'models', 'metadata');
+    const centroidsRef = doc(db, 'ClusterModel', 'centroids');
+    const metadataRef = doc(db, 'ClusterModel', 'metadata');
 
     const [centroidsSnap, metadataSnap] = await Promise.all([
       getDoc(centroidsRef),
@@ -375,7 +375,7 @@ function flattenPacketDocs(packetDocs) {
       }, i);
 
       const samplesFromEnd = (docsCount - 1 - dIdx) * L + (L - 1 - i);
-      const ts = new Date(now - samplesFromEnd * INTRA_PACKET_INTERVAL_MS).toISOString();
+      const ts = new Date(now - samplesFromEnd * CONFIG.INTRA_PACKET_INTERVAL_MS).toISOString();
       series.push({ timestamp: ts, score, risk: riskFromScore(score) });
     }
   }
