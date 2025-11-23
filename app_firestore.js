@@ -13,6 +13,7 @@ import {
   limit,
   onSnapshot,
   query,
+  orderBy,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 
@@ -420,7 +421,7 @@ let unsubscribe = null;
 let lastRMSSD = null, lastSDNN = null;
 
 function startSensorStream() {
-  const qRef = query(collection(db, CONFIG.COLLECTION_NAME), limit(CONFIG.PACKETS_FETCH));
+  const qRef = query(collection(db, CONFIG.COLLECTION_NAME), orderBy('__name__', 'desc'), limit(CONFIG.PACKETS_FETCH));
 
   unsubscribe = onSnapshot(qRef, (snapshot) => {
     try {
