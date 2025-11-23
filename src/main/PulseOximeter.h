@@ -13,6 +13,10 @@ public:
 
   void logging(FirebaseJson* json);
 
+  uint8_t getHeartRate();
+  
+  uint8_t getSPO2();
+
 private:
   MAX30105 m_particleSensor;
   uint32_t m_irBuffer[100];   //infrared LED sensor data

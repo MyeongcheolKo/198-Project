@@ -81,3 +81,7 @@ void Accelerometer::logging(FirebaseJson* json) {
   Logger::record(json, Constants::Accelerometer::ACZ_ID, m_AcZ);
   Logger::record(json, Constants::Accelerometer::MAGNITUDE_ID, m_magnitude);
 }
+
+uint16_t Accelerometer::getMagnitude(){
+  return m_magnitude;
+}

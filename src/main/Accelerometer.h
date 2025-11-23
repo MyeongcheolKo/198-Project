@@ -11,6 +11,8 @@ public:
 
   void logging(FirebaseJson* json);
 
+  uint16_t getMagnitude();
+
 private:
   uint8_t m_address;
   int16_t m_AcX;

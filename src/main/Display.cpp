@@ -4,14 +4,21 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
+#include "Accelerometer.h"
+#include "PulseOximeter.h"
+#include "TemperatureSensor.h"
 
-Display::Display(uint8_t address_) : address(address_)
-{
+Display::Display(uint8_t address, Accelerometer* accel, 
+            TemperatureSensor* temp, PulseOximeter* pulse){
     // allocate display object
     display = new Adafruit_SSD1306(Constants::Display::SCREEN_WIDTH, Constants::Display::SCREEN_HEIGHT, &Wire, -1);
 
     pinMode(Constants::Display::BUTTON_PIN, INPUT_PULLUP);
     pinMode(Constants::Display::BUZZER_PIN, OUTPUT);
+
+    m_accelerometer = accel;
+    m_tempSensor = temp;
+    m_pulseOx = pulse;
 
     // Attempt to initialize the display. Wire is expected to be initialized by main.
     if (!display->begin(SSD1306_SWITCHCAPVCC, address))
@@ -55,18 +62,22 @@ void Display::displayRealtimeData()
 
     case 1:
         display->println("Heart rate:");
+        display->println(m_pulseOx->getHeartRate());
         break;
 
     case 2:
         display->println("SPO2:");
+        display->println(m_pulseOx->getSPO2());
         break;
 
     case 3:
         display->println("Net Accel:");
+        display->println(m_accelerometer->getMagnitude());
         break;
 
     case 4:
         display->println("Temp:");
+        display->println(m_tempSensor->getTemp());
         break;
     }
 

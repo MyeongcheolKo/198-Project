@@ -25,7 +25,8 @@ void setup() {
   temperatureSensor = new TemperatureSensor(Constants::TemperatureSensor::ADDRESS);
   pulseOximeter = new PulseOximeter();
 
-  display = new Display(Constants::Display::SCREEN_ADDRESS);
+  display = new Display(Constants::Display::SCREEN_ADDRESS, accelerometer, 
+            temperatureSensor, pulseOximeter);
 
   if (Constants::LOGGING) {
     Logger::begin();

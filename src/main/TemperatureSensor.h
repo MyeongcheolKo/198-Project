@@ -11,6 +11,8 @@ public:
 
   void logging(FirebaseJson* json);
 
+  uint8_t getTemp();
+
 private:
   uint8_t m_address;
   uint8_t m_temp;

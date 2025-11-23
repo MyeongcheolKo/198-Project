@@ -6,7 +6,8 @@
 
 class Display {
 public:
-    Display(uint8_t address);
+    Display(uint8_t address, Accelerometer* accel, 
+            TemperatureSensor* temp, PulseOximeter* pulse);
     ~Display();
     void update();
     void displayRealtimeData();
@@ -22,6 +23,9 @@ private:
 
     uint8_t address{0};
     Adafruit_SSD1306 *display{nullptr};
+    Accelerometer* m_accelerometer;
+    TemperatureSensor* m_tempSensor;
+    PulseOximeter* m_pulseOx;
 };
 
 #endif // SRC_MAIN_DISPLAY_H
