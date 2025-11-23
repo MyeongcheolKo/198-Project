@@ -28,6 +28,8 @@ Display::Display(uint8_t address, Accelerometer* accel,
     m_display->setTextColor(WHITE);
     m_display->setCursor(0, 0);
     m_display->println("Powered On");
+    m_display->println("Connecting wifi...");
+
     m_display->display();
     Serial.println("powered on");
 }
@@ -57,24 +59,24 @@ void Display::displayRealtimeData()
     case 1:
         m_display->println("Heart rate:");
         m_display->println(m_pulseOx->getHeartRate());
-        Serial.println(m_pulseOx->getHeartRate());
+        // Serial.println(m_pulseOx->getHeartRate());
         break;
     case 2:
         m_display->println("SPO2:");
         m_display->println(m_pulseOx->getSPO2());
-        Serial.println(m_pulseOx->getSPO2());
+        // Serial.println(m_pulseOx->getSPO2());
         break;
 
     case 3:
         m_display->println("Net Accel:");
         m_display->println(m_accelerometer->getMagnitude());
-        Serial.println(m_accelerometer->getMagnitude());
+        // Serial.println(m_accelerometer->getMagnitude());
         break;
 
     case 4:
         m_display->println("Temp:");
         m_display->println(m_tempSensor->getTemp());
-        Serial.println(m_tempSensor->getTemp());
+        // Serial.println(m_tempSensor->getTemp());
         break;
     }
 
@@ -107,21 +109,21 @@ void Display::update()
 
                 if (realtime_mode)
                 {
-                    Serial.println("Entered realtime mode");
+                    // Serial.println("Entered realtime mode");
                     current_display = 0;
                 }
                 else
                 {
                     m_display->println("Realtime");
                     m_display->println("Mode OFF");
-                    Serial.println("Exited realtime mode");
+                    // Serial.println("Exited realtime mode");
                 }
 
                 m_display->display();
             }
 
             tone(Constants::Display::BUZZER_PIN, 440, 125);
-            Serial.println("----------");
+            // Serial.println("----------");
         }
     }
 
@@ -141,19 +143,19 @@ void Display::update()
                 if (stop_program)
                 {
                     m_display->println("Stopped");
-                    Serial.println("Stopped");
+                    // Serial.println("Stopped");
                 }
                 else
                 {
                     m_display->println("Resumed");
-                    Serial.println("Resumed");
+                    // Serial.println("Resumed");
                 }
 
                 m_display->display();
             }
 
             tone(Constants::Display::BUZZER_PIN, 523, 250);
-            Serial.println("----------");
+            // Serial.println("----------");
         }
 
         else if (!long_press_triggered && realtime_mode)
@@ -164,7 +166,7 @@ void Display::update()
                 current_display = 1;
             }
             tone(Constants::Display::BUZZER_PIN, 523, 250);
-            Serial.println(current_display);
+            // Serial.println(current_display);
         }
     }
     unsigned long now = millis();
@@ -186,12 +188,13 @@ void Display::update()
             if (getLocalTime(&timeinfo)) {
             strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &timeinfo);
             }
+            // Serial.println(timeStr);
+            m_display->clearDisplay();
+            m_display->setCursor(0, 0);
+            m_display->println(timeStr);
+            m_display->display();
         }
-        m_display->clearDisplay();
-        m_display->setCursor(0, 0);
-        m_display->println(timeStr);
-        m_display->display();
-        Serial.println(timeStr);
+        
     }
 
     last_button = button;

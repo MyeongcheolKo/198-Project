@@ -15,6 +15,8 @@ public:
   ~Display();
   void update();
   void displayRealtimeData();
+  
+  bool isRunning() const { return !stop_program; }
 
 private:
   int last_pressed_time{};
@@ -31,7 +33,7 @@ private:
   TemperatureSensor* m_tempSensor;
   PulseOximeter* m_pulseOx;
 
-char timeStr[10];
+  char timeStr[10];
   unsigned long lastUpdate = 0;
   const unsigned long UPDATE_INTERVAL = 1000;
 

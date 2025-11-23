@@ -53,7 +53,7 @@ void loop() {
   //   temperatureSensor->display();
   // }
 
-  if (Constants::LOGGING) {
+  if (Constants::LOGGING && oled->isRunning()) {
     uint32_t time{ millis() };
     if (time - lastTime > Constants::RECORDING_PERIOD) {
       accelerometer->logging(json);
