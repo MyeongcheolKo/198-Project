@@ -52,22 +52,22 @@ public:
     return &content;
   }
   static void record(FirebaseJson* content, const char id[], auto data) {
-    if (Firebase.ready()) {
-      content->set((std::string(id) + "/[" + std::to_string(Logger::m_index) + "]/integerValue").c_str(), std::to_string(data).c_str());
-    } else {
-      Serial.println("Firebase is not ready.");
-    }
+    content->set((std::string(id) + "/[" + std::to_string(Logger::m_index) + "]/integerValue").c_str(), std::to_string(data).c_str());
   }
   static void send(FirebaseJson* content) {
     uint32_t time{ millis() };
     Logger::m_index++;
     if (time - Logger::m_lastTime >= Constants::LOGGING_PERIOD) {
-      if (Firebase.Firestore.createDocument(&fbdo, PROJECT_ID, "", PATH, std::to_string(~time).c_str(), content->raw(), "")) {
-        Logger::m_lastTime = time;
-        content->clear();
-        Logger::m_index = 0;
+      if (Firebase.ready()) {
+        if (Firebase.Firestore.createDocument(&fbdo, PROJECT_ID, "", PATH, std::to_string(~time).c_str(), content->raw(), "")) {
+          Logger::m_lastTime = time;
+          content->clear();
+          Logger::m_index = 0;
+        } else {
+          Serial.println(fbdo.errorReason());
+        }
       } else {
-        Serial.println(fbdo.errorReason());
+        Serial.println("Firebase is not ready.");
       }
     }
   }
