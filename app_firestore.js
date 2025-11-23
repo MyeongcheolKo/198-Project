@@ -5,16 +5,26 @@ import { firebaseConfig } from './firebase-config.js';
 import { setConnected, setScore, setHistory, setRawValues, onScoringModeChange } from './ui.js';
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, onSnapshot, query, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  limit,
+  onSnapshot,
+  query,
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
 
 // ================== CONFIG ==================
-const COLLECTION_NAME = 'SensorData';
-const INTRA_PACKET_INTERVAL_MS = 200;
-const PACKETS_FETCH = 8;
-const MAX_POINTS = 600;
-
-let SCORING_MODE = 'blend';
-const BLEND_ALPHA = 0.5;  // 0.5 = 50/50 weighted + clustering
+const CONFIG = {
+  COLLECTION_NAME: 'SensorData',
+  INTRA_PACKET_INTERVAL_MS: 200,
+  PACKETS_FETCH: 8,
+  MAX_POINTS: 600,
+  scoringMode: 'blend',
+  BLEND_ALPHA: 0.5, // 0.5 = 50/50 weighted + clustering
+};
 // ============================================
 
 const app = initializeApp(firebaseConfig);
@@ -179,15 +189,22 @@ let clusterModel = null;
 
 async function loadClusterModel() {
   try {
-    const centroidsDoc = await db.collection('ClusterModel').doc('centroids').get();
-    const metadataDoc = await db.collection('ClusterModel').doc('metadata').get();
-    
-    if (centroidsDoc.exists && metadataDoc.exists) {
-      clusterModel = {
-        centroids: centroidsDoc.data().centroids,
-        metadata: metadataDoc.data(),
-      };
-      console.log('[clustering] Model loaded with', clusterModel.centroids.length, 'clusters');
+    const modelDocRef = doc(db, 'models', 'ClusterModel');
+    const modelDocSnap = await getDoc(modelDocRef);
+
+    if (modelDocSnap.exists) {
+      const modelData = modelDocSnap.data();
+      if (modelData.centroids && modelData.metadata) {
+        clusterModel = {
+          centroids: modelData.centroids,
+          metadata: modelData.metadata,
+        };
+        console.log('[clustering] Model loaded with', clusterModel.centroids.length, 'clusters');
+      } else {
+        console.warn('[clustering] Centroids or metadata not found in ClusterModel document');
+      }
+    } else {
+      console.warn('[clustering] ClusterModel document not found');
     }
   } catch (err) {
     console.warn('[clustering] Could not load model:', err.message);
@@ -302,13 +319,13 @@ function computeBlendedScore({ hrArr, spo2Arr, magArr, tempArr }, idx) {
   const weighted = computeWeightedScore({ hrArr, spo2Arr, magArr, tempArr }, idx);
   const clustering = computeClusteringScore({ hrArr, spo2Arr, magArr, tempArr }, idx);
 
-  const blended = BLEND_ALPHA * clustering.score + (1 - BLEND_ALPHA) * weighted.score;
+  const blended = CONFIG.BLEND_ALPHA * clustering.score + (1 - CONFIG.BLEND_ALPHA) * weighted.score;
   return { score: clamp01(blended), method: 'blend' };
 }
 
 // ===== UNIFIED DISPATCHER =====
 function computeRiskScore(sensors, idx) {
-  switch (SCORING_MODE) {
+  switch (CONFIG.scoringMode) {
     case 'weighted': return computeWeightedScore(sensors, idx);
     case 'clustering': return computeClusteringScore(sensors, idx);
     case 'blend': return computeBlendedScore(sensors, idx);
@@ -346,7 +363,7 @@ function flattenPacketDocs(packetDocs) {
       series.push({ timestamp: ts, score, risk: riskFromScore(score) });
     }
   }
-  return series.slice(-MAX_POINTS);
+  return series.slice(-CONFIG.MAX_POINTS);
 }
 
 function lastOf(arr) {
@@ -387,8 +404,7 @@ let unsubscribe = null;
 let lastRMSSD = null, lastSDNN = null;
 
 function startSensorStream() {
-  const colRef = collection(db, COLLECTION_NAME);
-  const qRef = query(colRef, limit(PACKETS_FETCH));
+  const qRef = query(collection(db, CONFIG.COLLECTION_NAME), limit(CONFIG.PACKETS_FETCH));
 
   unsubscribe = onSnapshot(qRef, (snapshot) => {
     try {
@@ -444,7 +460,7 @@ function startSensorStream() {
 }
 
 function handleScoringModeChange(newMode) {
-  SCORING_MODE = newMode;
+  CONFIG.scoringMode = newMode;
   if (typeof unsubscribe === 'function') unsubscribe();
   startSensorStream();
 }
