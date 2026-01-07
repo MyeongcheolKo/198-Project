@@ -1,0 +1,16 @@
+{
+  "window_starts": [
+    0,
+    300,
+    600,
+    900,
+    1200,
+    1500,
+    1800,
+    2100,
+    2400,
+    2700
+  ],
+  "window_duration_seconds": 300,
+  "sample_interval_ms": 200
+}

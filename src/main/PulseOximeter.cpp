@@ -1,65 +1,92 @@
+#include "esp32-hal.h"
+#include "HardwareSerial.h"
 #include "Constants.h"
 #include "PulseOximeter.h"
-#include "heartRate.h"
 #include "spo2_algorithm.h"
+#include "heartRate.h"
 #include <Wire.h>
 #include "Logger.h"
 #include <Firebase_ESP_Client.h>
 
 PulseOximeter::PulseOximeter() {
-  m_rateSpot = 0;
-  m_lastBeat = 0;  //Time at which the last beat occurred
-  m_beatsPerMinute = 0.0;
-  m_beatAvg = 0;
-  m_irValue = 0;
-
   // Initialize sensor
   if (!m_particleSensor.begin(Wire, I2C_SPEED_FAST))  //Use default I2C port, 400kHz speed
   {
     Serial.println("MAX30105 was not found. Please check wiring/power. ");
   }
-  Serial.println("Place your index finger on the sensor with steady pressure.");
 
-  m_particleSensor.setup();                     //Configure sensor with default settings
-  m_particleSensor.setPulseAmplitudeRed(0x0A);  //Turn Red LED to low to indicate sensor is running
-  m_particleSensor.setPulseAmplitudeGreen(0);   //Turn off Green LED
+  // Configure sensor
+  m_particleSensor.setup(
+    Constants::PulseOximeter::POWER_LEVEL,
+    Constants::PulseOximeter::SAMPLE_AVERAGE,
+    Constants::PulseOximeter::LED_MODE,
+    Constants::PulseOximeter::SAMPLE_RATE,
+    Constants::PulseOximeter::PULSE_WIDTH,
+    Constants::PulseOximeter::ADC_RANGE);
+  m_startUp = true;
 }
 
 void PulseOximeter::update() {
-  uint32_t irValue = m_particleSensor.getIR();
-  m_irValue = m_irValue * Constants::PulseOximeter::WEIGHT + irValue * (1 - Constants::PulseOximeter::WEIGHT);
+  if (m_startUp) {
+    //read the first 100 samples, and determine the signal range
+    for (uint32_t i{ 0 }; i < Constants::PulseOximeter::BUFFER_LENGTH; i++) {
+      m_particleSensor.check();
+      if (m_particleSensor.available()) {
+        m_redBuffer[i] = m_particleSensor.getRed();
+        m_irBuffer[i] = m_particleSensor.getIR();
+        m_particleSensor.nextSample();  //We're finished with this sample so move to next sample
+      }
+    }
 
-  if (checkForBeat(m_irValue) == true) {
-    //We sensed a beat!
-    long delta = millis() - m_lastBeat;
-    m_lastBeat = millis();
+    //calculate heart rate and SpO2 after first 100 samples (first 4 seconds of samples)
+    maxim_heart_rate_and_oxygen_saturation(m_irBuffer, Constants::PulseOximeter::BUFFER_LENGTH, m_redBuffer, &m_spo2, &m_validSPO2, &m_heartRate, &m_validHeartRate);
+    m_startUp = false;
+  }
 
-    float beatsPerMinute = 60 / (delta / 1000.0);
-    m_beatsPerMinute = m_beatsPerMinute * Constants::PulseOximeter::WEIGHT + beatsPerMinute * (1 - Constants::PulseOximeter::WEIGHT);
+  //dumping the first sets of samples in the memory and shift the last sets of samples to the top
+  for (uint32_t i{ Constants::PulseOximeter::WINDOW_LENGTH }; i < Constants::PulseOximeter::BUFFER_LENGTH; i++) {
+    m_redBuffer[i - Constants::PulseOximeter::WINDOW_LENGTH] = m_redBuffer[i];
+    m_irBuffer[i - Constants::PulseOximeter::WINDOW_LENGTH] = m_irBuffer[i];
+  }
 
-    if (m_beatsPerMinute < 255 && m_beatsPerMinute > 20) {
-      m_rates[m_rateSpot++] = (uint8_t)m_beatsPerMinute;  //Store this reading in the array
-      m_rateSpot %= Constants::PulseOximeter::RATE_SIZE;  //Wrap variable
-
-      //Take average of readings
-      m_beatAvg = 0;
-      for (uint8_t x = 0; x < Constants::PulseOximeter::RATE_SIZE; x++)
-        m_beatAvg += m_rates[x];
-      m_beatAvg /= Constants::PulseOximeter::RATE_SIZE;
+  //take 25 sets of samples before calculating the heart rate.
+  for (uint32_t i{ Constants::PulseOximeter::BUFFER_LENGTH - Constants::PulseOximeter::WINDOW_LENGTH }; i < Constants::PulseOximeter::BUFFER_LENGTH; i++) {
+    m_particleSensor.check();
+    if (m_particleSensor.available()) {
+      m_redBuffer[i] = m_particleSensor.getRed();
+      m_irBuffer[i] = m_particleSensor.getIR();
+      m_particleSensor.nextSample();  //We're finished with this sample so move to next sample
     }
   }
+
+  //After gathering 25 new samples recalculate HR and SP02
+  maxim_heart_rate_and_oxygen_saturation(m_irBuffer, Constants::PulseOximeter::BUFFER_LENGTH, m_redBuffer, &m_spo2, &m_validSPO2, &m_heartRate, &m_validHeartRate);
+  m_heartRate /= 2;
 }
 
 void PulseOximeter::display() {
-  Logger::display("IR:", m_irValue);
-  Logger::display("BPM:", m_beatsPerMinute);
-  Logger::display("ABPM:", m_beatAvg);
+  //send samples and calculation result to terminal program through UART
+  for (uint32_t i{ Constants::PulseOximeter::BUFFER_LENGTH - Constants::PulseOximeter::WINDOW_LENGTH }; i < Constants::PulseOximeter::BUFFER_LENGTH; i++) {
+    Logger::display("red:", m_redBuffer[i]);
+    Logger::display("ir:", m_irBuffer[i]);
+  }
+  Logger::display("HR:", m_heartRate);
+  Logger::display("SPO2:", m_spo2);
 }
 
 void PulseOximeter::logging(FirebaseJson* json) {
-  // if (m_irValue >= 50000) {
-  Logger::record(json, Constants::PulseOximeter::IR_ID, m_irValue);
-  Logger::record(json, Constants::PulseOximeter::BPM_ID, m_beatsPerMinute);
-  Logger::record(json, Constants::PulseOximeter::AVG_BPM_ID, m_beatAvg);
-  // }
+  if (m_validHeartRate) {
+    Logger::record(json, Constants::PulseOximeter::HR_ID, m_heartRate);
+  }
+  if (m_validSPO2) {
+    Logger::record(json, Constants::PulseOximeter::SPO2_ID, m_spo2);
+  }
+}
+
+uint8_t PulseOximeter::getHeartRate(){
+  return m_heartRate;
+}
+
+uint8_t PulseOximeter::getSPO2(){
+  return m_spo2;
 }
