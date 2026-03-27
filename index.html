@@ -3,8 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Delirium Monitor</title>
+  <title>Delirium Monitor (SensorData - Firestore)</title>
+
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 </head>
 <body>
   <header>
@@ -20,15 +25,7 @@
         <input type="checkbox" id="mute" />
         Mute alerts
       </label>
-      <label>
-        Scoring Mode:
-        <select id="scoringMode">
-          <option value="blend">Blended (Weighted + ML)</option>
-          <option value="weighted">Weighted (Clinical Rules)</option>
-          <option value="clustering">ML-Based (K-Means Clustering)</option>
-        </select>
-      </label>
-      <span class="hint">Real-time Firestore: <code>SensorData</code></span>
+      <span class="hint">Live from Firestore: <code>SensorData</code></span>
     </section>
 
     <section class="cards">
@@ -40,27 +37,32 @@
       </div>
 
       <div class="card notes">
-        <p><strong>Delirium Detection System</strong><br>Real-time analysis of multi-sensor data using clinical HRV markers and machine learning.</p>
+        <p>
+          <strong>Note:</strong>
+          This dashboard shows real-life data streamed directly from our delirium detection device.
+        </p>
       </div>
 
       <div class="card raw">
-        <div class="label">Latest Readings</div>
+        <div class="label">Latest Sensor Readings</div>
         <ul id="rawValues">
+          <li><strong>IR:</strong> —</li>
+          <li><strong>BPM:</strong> —</li>
+          <li><strong>ABPM:</strong> —</li>
           <li><strong>AcX:</strong> —</li>
           <li><strong>AcY:</strong> —</li>
           <li><strong>AcZ:</strong> —</li>
-          <li><strong>HR:</strong> —</li>
-          <li><strong>Magnitude:</strong> —</li>
-          <li><strong>SPO2:</strong> —</li>
           <li><strong>Temp:</strong> —</li>
-          <li><strong>RMSSD (ms):</strong> —</li>
-          <li><strong>SDNN (ms):</strong> —</li>
         </ul>
       </div>
     </section>
 
+    <section class="chartwrap">
+      <canvas id="chart" role="img" aria-label="Delirium risk over time"></canvas>
+    </section>
+
     <section>
-      <h2>Recent Events</h2>
+      <h2>Recent events</h2>
       <table id="events">
         <thead>
           <tr>
@@ -74,6 +76,7 @@
     </section>
   </main>
 
+  <!-- App entrypoint -->
   <script type="module" src="./bootstrap.js"></script>
 </body>
 </html>

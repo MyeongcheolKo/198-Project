@@ -1,8 +1,7 @@
 // ui.js — shared UI functions
 
+let chart;
 const els = {};
-let pendingHistory = null;
-let scoringModeChangeCallback = null;
 
 function q(id) {
   return document.getElementById(id);
@@ -16,39 +15,55 @@ export function initUI() {
   els.updated = q('lastUpdated');
   els.tableBody = document.querySelector('#events tbody');
   els.raw = document.getElementById('rawValues');
-  els.scoringMode = q('scoringMode');
 
-  // NEW: Wire up scoring mode selector
-  if (els.scoringMode) {
-    els.scoringMode.addEventListener('change', (e) => {
-      const newMode = e.target.value;
-      console.log('[ui] mode changed to:', newMode);
-      if (scoringModeChangeCallback) scoringModeChangeCallback(newMode);
-    });
-  }
+  initChart();
+}
 
-  // If we received history before init, apply it now
-  if (pendingHistory) {
-    setHistory(pendingHistory);
-    pendingHistory = null;
-  }
+function initChart() {
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [
+        {
+          label: 'Delirium risk',
+          data: [],
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.15,
+        },
+      ],
+    },
+    options: {
+      parsing: false,
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'time',
+          time: { tooltipFormat: 'PPpp' },
+        },
+        y: {
+          min: 0,
+          max: 1,
+          ticks: { stepSize: 0.1 },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'nearest', intersect: false },
+      },
+    },
+  });
 }
 
 export function setConnected(ok) {
-  if (!els.status) {
-    // UI not initialized yet; don't throw
-    console.debug('[ui] setConnected called before initUI');
-    return;
-  }
   els.status.textContent = ok ? 'Live' : 'Disconnected';
   els.status.dataset.state = ok ? 'live' : 'down';
 }
 
 export function setScore(score, risk, tsIso) {
-  if (!els.score) {
-    console.debug('[ui] setScore called before initUI');
-    return;
-  }
   els.score.textContent = Number(score).toFixed(2);
   const r = risk ?? (score >= 0.6 ? 'high' : score >= 0.3 ? 'moderate' : 'low');
   els.risk.textContent = String(r).toUpperCase();
@@ -57,18 +72,15 @@ export function setScore(score, risk, tsIso) {
 }
 
 export function setHistory(readings) {
-  if (!Array.isArray(readings) || readings.length === 0) {
-    console.debug('[ui] setHistory called with empty readings');
-    return;
-  }
+  chart.data.datasets[0].data = readings.map((r) => ({
+    x: r.timestamp,
+    y: r.score,
+  }));
+  pruneChart();
+  chart.update();
 
   const last = readings[readings.length - 1];
   if (last) setScore(last.score, last.risk, last.timestamp);
-
-  if (!els.tableBody) {
-    console.debug('[ui] setHistory called before table element exists');
-    return;
-  }
 
   els.tableBody.innerHTML = '';
   readings
@@ -90,36 +102,25 @@ export function setHistory(readings) {
     });
 }
 
+function pruneChart() {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  chart.data.datasets[0].data = chart.data.datasets[0].data.filter((p) => {
+    return new Date(p.x).getTime() >= cutoff;
+  });
+}
+
+// 👇 THIS is the export your app_firestore.js is trying to import
 export function setRawValues(values) {
-  if (!els.raw) {
-    console.debug('[ui] setRawValues called before initUI');
-    return;
-  }
-  const fmt = (v) => {
-    if (v === null || v === undefined) return '—';
-    const n = Number(v);
-    return Number.isFinite(n) ? n.toFixed(2) : '—';
-  };
+  if (!els.raw) return;
+  const fmt = (v) => (v === null || v === undefined ? '—' : v);
 
   els.raw.innerHTML = `
+    <li><strong>IR:</strong> ${fmt(values.IR)}</li>
+    <li><strong>BPM:</strong> ${fmt(values.BPM)}</li>
+    <li><strong>ABPM:</strong> ${fmt(values.ABPM)}</li>
     <li><strong>AcX:</strong> ${fmt(values.AcX)}</li>
     <li><strong>AcY:</strong> ${fmt(values.AcY)}</li>
     <li><strong>AcZ:</strong> ${fmt(values.AcZ)}</li>
-    <li><strong>HR:</strong> ${fmt(values.HR)}</li>
-    <li><strong>Magnitude:</strong> ${fmt(values.Magnitude)}</li>
-    <li><strong>SPO2:</strong> ${fmt(values.SPO2)}</li>
     <li><strong>Temp:</strong> ${fmt(values.Temp)}</li>
-    <li><strong>RMSSD (ms):</strong> ${fmt(values.RMSSD)}</li>
-    <li><strong>SDNN (ms):</strong> ${fmt(values.SDNN)}</li>
   `;
 }
-
-// NEW: Register callback for mode changes
-export function onScoringModeChange(callback) {
-  scoringModeChangeCallback = callback;
-}
-
-// Auto-init UI as a safe fallback
-window.addEventListener('DOMContentLoaded', () => {
-  try { initUI(); } catch (e) { console.debug('[ui] auto init failed', e); }
-});
